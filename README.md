@@ -13,6 +13,11 @@ My additions:
 - Double Jumping
 - Wall Sliding
 - Crouch jumping
+- Ledge Grappling
+- Ground Sliding
+- Ramp Sliding
+
+My aim is to create an elegant 2D character controller with seamless movement transitions, maximizing responsiveness.
 
 To learn how to use it check out Brackey's video on: [YouTube Channel](http://youtube.com/brackeys).
 
