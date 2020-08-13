@@ -15,18 +15,18 @@ public class CharacterController2D : MonoBehaviour
 	[SerializeField] private Transform m_WallCheck;							// A position marking where to check for walls
 	[SerializeField] private Collider2D m_CrouchDisableCollider;				// A collider that will be disabled when crouching
 
-	private float totalJumpForce;
 	const float k_GroundedRadius = .2f; // Radius of the overlap circle to determine if grounded
 	private bool m_Grounded;            // Whether or not the player is grounded.
 	const float k_CeilingRadius = .2f; // Radius of the overlap circle to determine if the player can stand up
 	private Rigidbody2D m_Rigidbody2D;
 	private bool m_FacingRight = true;  // For determining which way the player is currently facing.
 	private Vector3 m_Velocity = Vector3.zero;
-	private RaycastHit2D wallCheckHit;
+	private float totalJumpForce;		//Aggregate force applied for jumps
+	private RaycastHit2D wallCheckHit;	//Whether or not player is touching wall
 	private bool isWallSliding = false;
 	public float wallCheckDistance;
 	public float maxWallSlideVelocity = 2f;
-	
+	public float dashMaxCooldown = 3f;
 
 	[Header("Events")]
 	[Space]
@@ -52,6 +52,10 @@ public class CharacterController2D : MonoBehaviour
 
 	private void FixedUpdate()
 	{
+		if (dashMaxCooldown < 3f)
+		{
+			dashMaxCooldown+=Time.deltaTime;
+		}
 		bool wasGrounded = m_Grounded;
 		m_Grounded = false;
 
@@ -93,7 +97,7 @@ public class CharacterController2D : MonoBehaviour
 	}
 
 
-	public void Move(float move, bool crouch, bool jump)
+	public void Move(float move, bool crouch, bool jump, bool dash)
 	{
 		// If crouching, check to see if the character can stand up
 		if (!crouch)
@@ -161,6 +165,13 @@ public class CharacterController2D : MonoBehaviour
 				Flip();
 			}
 		}
+
+		if (dash && dashMaxCooldown >= 3f)
+		{
+			Dash();
+			dashMaxCooldown = 0f;
+		}
+
 		// If the player should jump...
 		if (!m_Grounded && jump && num_Jumps > 1)
 		{
@@ -177,12 +188,15 @@ public class CharacterController2D : MonoBehaviour
 			{
 				totalJumpForce = m_CrouchJumpForce + m_JumpForce;
 			}
-			Debug.Log(totalJumpForce);
 			m_Rigidbody2D.AddForce(new Vector2(0f, totalJumpForce));
 		}
 
 	}
 
+	private void Dash()
+	{
+		m_Rigidbody2D.AddForce(new Vector2(m_Rigidbody2D.velocity.x*500, 0f));
+	}
 
 	private void Flip()
 	{
