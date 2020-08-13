@@ -4,20 +4,29 @@ using UnityEngine.Events;
 public class CharacterController2D : MonoBehaviour
 {
 	[SerializeField] private float m_JumpForce = 400f;							// Amount of force added when the player jumps.
+	[SerializeField] private float m_CrouchJumpForce = 100f;					// Additional force added when the player crouch jumps.
+	[SerializeField] private int num_Jumps = 2;								// Number of jumps player can perform
 	[Range(0, 1)] [SerializeField] private float m_CrouchSpeed = .36f;			// Amount of maxSpeed applied to crouching movement. 1 = 100%
 	[Range(0, .3f)] [SerializeField] private float m_MovementSmoothing = .05f;	// How much to smooth out the movement
 	[SerializeField] private bool m_AirControl = false;							// Whether or not a player can steer while jumping;
 	[SerializeField] private LayerMask m_WhatIsGround;							// A mask determining what is ground to the character
 	[SerializeField] private Transform m_GroundCheck;							// A position marking where to check if the player is grounded.
 	[SerializeField] private Transform m_CeilingCheck;							// A position marking where to check for ceilings
+	[SerializeField] private Transform m_WallCheck;							// A position marking where to check for walls
 	[SerializeField] private Collider2D m_CrouchDisableCollider;				// A collider that will be disabled when crouching
 
+	private float totalJumpForce;
 	const float k_GroundedRadius = .2f; // Radius of the overlap circle to determine if grounded
 	private bool m_Grounded;            // Whether or not the player is grounded.
 	const float k_CeilingRadius = .2f; // Radius of the overlap circle to determine if the player can stand up
 	private Rigidbody2D m_Rigidbody2D;
 	private bool m_FacingRight = true;  // For determining which way the player is currently facing.
 	private Vector3 m_Velocity = Vector3.zero;
+	private RaycastHit2D wallCheckHit;
+	private bool isWallSliding = false;
+	public float wallCheckDistance;
+	public float maxWallSlideVelocity = 2f;
+	
 
 	[Header("Events")]
 	[Space]
@@ -54,8 +63,31 @@ public class CharacterController2D : MonoBehaviour
 			if (colliders[i].gameObject != gameObject)
 			{
 				m_Grounded = true;
+				num_Jumps=2;
 				if (!wasGrounded)
 					OnLandEvent.Invoke();
+			}
+		}
+
+		//wallsliding logic
+		wallCheckHit = Physics2D.Raycast(m_WallCheck.position, m_WallCheck.right, wallCheckDistance, m_WhatIsGround);
+		
+		if (wallCheckHit && m_Rigidbody2D.velocity.y <= 0 && !m_Grounded)
+		{
+			isWallSliding = true;
+			m_Rigidbody2D.velocity = new Vector2(0, m_Rigidbody2D.velocity.y);
+			num_Jumps=2;
+		}
+		else 
+		{
+			isWallSliding = false;
+		}
+
+		if (isWallSliding)
+		{
+			if(m_Rigidbody2D.velocity.y < -maxWallSlideVelocity)
+			{
+				m_Rigidbody2D.velocity = new Vector2(m_Rigidbody2D.velocity.x, -maxWallSlideVelocity);
 			}
 		}
 	}
@@ -107,8 +139,14 @@ public class CharacterController2D : MonoBehaviour
 
 			// Move the character by finding the target velocity
 			Vector3 targetVelocity = new Vector2(move * 10f, m_Rigidbody2D.velocity.y);
+			
+			//when wall sliding, reduce horizontal velocity to zero
+			if (isWallSliding){
+				targetVelocity.x = 0f;
+			}
 			// And then smoothing it out and applying it to the character
 			m_Rigidbody2D.velocity = Vector3.SmoothDamp(m_Rigidbody2D.velocity, targetVelocity, ref m_Velocity, m_MovementSmoothing);
+
 
 			// If the input is moving the player right and the player is facing left...
 			if (move > 0 && !m_FacingRight)
@@ -124,12 +162,25 @@ public class CharacterController2D : MonoBehaviour
 			}
 		}
 		// If the player should jump...
-		if (m_Grounded && jump)
+		if (!m_Grounded && jump && num_Jumps > 1)
+		{
+			num_Jumps-=1;
+			m_Rigidbody2D.AddForce(new Vector2(0f, m_JumpForce));
+			
+		}
+		else if (m_Grounded && jump)
 		{
 			// Add a vertical force to the player.
+			totalJumpForce=m_JumpForce;
 			m_Grounded = false;
-			m_Rigidbody2D.AddForce(new Vector2(0f, m_JumpForce));
+			if (crouch)
+			{
+				totalJumpForce = m_CrouchJumpForce + m_JumpForce;
+			}
+			Debug.Log(totalJumpForce);
+			m_Rigidbody2D.AddForce(new Vector2(0f, totalJumpForce));
 		}
+
 	}
 
 
@@ -139,8 +190,10 @@ public class CharacterController2D : MonoBehaviour
 		m_FacingRight = !m_FacingRight;
 
 		// Multiply the player's x local scale by -1.
-		Vector3 theScale = transform.localScale;
+		//Old method of flipping character. Deprecated after introducing FirePoint
+/* 		Vector3 theScale = transform.localScale;
 		theScale.x *= -1;
-		transform.localScale = theScale;
+		transform.localScale = theScale; */
+		transform.Rotate(0f,180f,0f);
 	}
 }
