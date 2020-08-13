@@ -12,7 +12,8 @@ public class CharacterController2D : MonoBehaviour
 	[SerializeField] private LayerMask m_WhatIsGround;							// A mask determining what is ground to the character
 	[SerializeField] private Transform m_GroundCheck;							// A position marking where to check if the player is grounded.
 	[SerializeField] private Transform m_CeilingCheck;							// A position marking where to check for ceilings
-	[SerializeField] private Transform m_WallCheck;							// A position marking where to check for walls
+	[SerializeField] private Transform m_WallCheck;								// A position marking where to check for walls
+	[SerializeField] private Transform m_ledgeCheck;							// A position marking where to check for walls
 	[SerializeField] private Collider2D m_CrouchDisableCollider;				// A collider that will be disabled when crouching
 
 	const float k_GroundedRadius = .2f; // Radius of the overlap circle to determine if grounded
@@ -21,12 +22,17 @@ public class CharacterController2D : MonoBehaviour
 	private Rigidbody2D m_Rigidbody2D;
 	private bool m_FacingRight = true;  // For determining which way the player is currently facing.
 	private Vector3 m_Velocity = Vector3.zero;
+
 	private float totalJumpForce;		//Aggregate force applied for jumps
 	private RaycastHit2D wallCheckHit;	//Whether or not player is touching wall
+	private RaycastHit2D ledgeCheckHit;	//Whether or not player is touching wall
 	private bool isWallSliding = false;
 	public float wallCheckDistance;
+	public float ledgeCheckDistance;
 	public float maxWallSlideVelocity = 2f;
 	public float dashMaxCooldown = 3f;
+	public float slideVelocityMultiplier = 0.8f;
+
 
 	[Header("Events")]
 	[Space]
@@ -52,6 +58,7 @@ public class CharacterController2D : MonoBehaviour
 
 	private void FixedUpdate()
 	{
+		//Debug.Log(m_Rigidbody2D.velocity.x);
 		if (dashMaxCooldown < 3f)
 		{
 			dashMaxCooldown+=Time.deltaTime;
@@ -75,7 +82,8 @@ public class CharacterController2D : MonoBehaviour
 
 		//wallsliding logic
 		wallCheckHit = Physics2D.Raycast(m_WallCheck.position, m_WallCheck.right, wallCheckDistance, m_WhatIsGround);
-		
+		ledgeCheckHit = Physics2D.Raycast(m_ledgeCheck.position, m_ledgeCheck.right, wallCheckDistance, m_WhatIsGround);
+
 		if (wallCheckHit && m_Rigidbody2D.velocity.y <= 0 && !m_Grounded)
 		{
 			isWallSliding = true;
@@ -89,7 +97,7 @@ public class CharacterController2D : MonoBehaviour
 
 		if (isWallSliding)
 		{
-			if(m_Rigidbody2D.velocity.y < -maxWallSlideVelocity)
+			if(m_Rigidbody2D.velocity.x >= 0)
 			{
 				m_Rigidbody2D.velocity = new Vector2(m_Rigidbody2D.velocity.x, -maxWallSlideVelocity);
 			}
@@ -195,7 +203,7 @@ public class CharacterController2D : MonoBehaviour
 
 	private void Dash()
 	{
-		m_Rigidbody2D.AddForce(new Vector2(m_Rigidbody2D.velocity.x*500, 0f));
+		m_Rigidbody2D.AddForce(new Vector2(m_Rigidbody2D.velocity.x*400f, 0f));
 	}
 
 	private void Flip()
